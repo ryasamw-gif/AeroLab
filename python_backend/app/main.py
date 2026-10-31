@@ -1,56 +1,52 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
+from typing import Any, Dict, List
 
-from pydantic import BaseModel, Field
+from fastapi import FastAPI
 
+from app.schemas import RocketConfig, SimulationRequest
+from app.services.simulation_service import SimulationService
+from ml.rocket_ml import RocketFlightPredictor
 
-DATA_DIR = Path(__file__).resolve().parents[2] / "data"
+app = FastAPI(title="AeroLab API", version="1.0.0")
 
-
-class ComponentSpec(BaseModel):
-    name: str
-    type: str
-    material: str
-    mass_kg: float
-    length_m: float
-    radius_m: float
-    thickness_m: float = 0.0
-    drag_coefficient: float = 0.3
+service = SimulationService()
+predictor = RocketFlightPredictor()
 
 
-class RocketComponent(BaseModel):
-    name: str
-    type: str
-    material: str = "aluminum"
-    mass_kg: float = 0.0
-    length_m: float = 0.0
-    radius_m: float = 0.0
-    thickness_m: float = 0.0
-    drag_coefficient: float = 0.3
+@app.get("/health")
+def health() -> dict:
+    return {"status": "ok", "service": "AeroLab API"}
 
 
-class RocketConfig(BaseModel):
-    name: str = "AeroLab Rocket"
-    components: list[RocketComponent]
-    motor_thrust_n: float = 1500.0
-    burn_time_s: float = 4.0
-    propellant_mass_kg: float = 2.5
-    launch_angle_deg: float = 85.0
-    initial_altitude_m: float = 0.0
+@app.get("/inventory")
+def get_inventory() -> dict:
+    return service.inventory()
 
 
-class SimulationRequest(BaseModel):
-    rocket: RocketConfig
-    integrator: str = Field(default="RK4", pattern="^(Euler|RK4)$")
-    time_step_s: float = 0.05
-    max_duration_s: float = 30.0
-    drag_coefficient: float = 0.35
-    wind_speed_mps: float = 2.0
+@app.get("/config/default")
+def get_default_configuration() -> dict:
+    return service.default_configuration()
 
 
-def load_inventory() -> dict:
-    inventory_path = DATA_DIR / "rocket_inventory.json"
-    with inventory_path.open("r", encoding="utf-8") as fh:
-        return json.load(fh)
+@app.post("/simulation/run")
+def run_simulation(request: SimulationRequest) -> dict:
+    return service.run(request)
+
+
+@app.post("/ml/ingest")
+def ingest_user_data(records: List[dict]) -> dict:
+    return predictor.ingest_records(records)
+
+
+@app.post("/ml/train")
+def train_ml(dataset: List[dict] | None = None) -> dict:
+    predictor.ensure_trained()
+    return predictor.fit(dataset)
+
+
+@app.post("/ml/predict")
+def predict_flight(payload: Dict[str, Any]) -> dict:
+    rocket = payload.get("rocket") or payload
+    request = payload.get("request") or {"drag_coefficient": 0.35, "wind_speed_mps": 2.0}
+    return predictor.predict(rocket, request)

@@ -1,7 +1,56 @@
-# python_backend/requirements.txt
-fastapi>=0.111.0
-uvicorn[standard]>=0.30.0
-pydantic>=2.7.0
-numpy>=1.26.0
-matplotlib>=3.8.0
-pytest>=8.0.0
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.schemas import SimulationRequest
+from app.services.simulation_service import SimulationService
+from ml.rocket_ml import RocketFlightPredictor
+
+app = FastAPI(title="AeroLab API", version="1.0.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+service = SimulationService()
+predictor = RocketFlightPredictor()
+
+
+@app.get("/health")
+def health() -> dict:
+    return {"status": "ok", "service": "AeroLab API"}
+
+
+@app.get("/inventory")
+def get_inventory() -> dict:
+    return service.inventory()
+
+
+@app.get("/config/default")
+def get_default_configuration() -> dict:
+    return service.default_configuration()
+
+
+@app.post("/simulation/run")
+def run_simulation(request: SimulationRequest) -> dict:
+    return service.run(request)
+
+
+@app.post("/ml/ingest")
+def ingest_user_data(records: list[dict]) -> dict:
+    return predictor.ingest_records(records)
+
+
+@app.post("/ml/train")
+def train_ml(dataset: list[dict] | None = None) -> dict:
+    predictor.ensure_trained()
+    return predictor.fit(dataset)
+
+
+@app.post("/ml/predict")
+def predict_flight(payload: dict) -> dict:
+    rocket = payload.get("rocket") or payload
+    request = payload.get("request") or {"drag_coefficient": 0.35, "wind_speed_mps": 2.0}
+    return predictor.predict(rocket, request)
