@@ -1,31 +1,56 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from __future__ import annotations
 
-from app.schemas import SimulationRequest
-from app.services.simulation_service import SimulationService
+import json
+from pathlib import Path
 
-app = FastAPI(title="AeroLab API", version="1.0.0")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-service = SimulationService()
+from pydantic import BaseModel, Field
 
 
-@app.get("/health")
-def health() -> dict:
-    return {"status": "ok", "service": "AeroLab API"}
+DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
 
-@app.get("/inventory")
-def get_inventory() -> dict:
-    return service.inventory()
+class ComponentSpec(BaseModel):
+    name: str
+    type: str
+    material: str
+    mass_kg: float
+    length_m: float
+    radius_m: float
+    thickness_m: float = 0.0
+    drag_coefficient: float = 0.3
 
 
-@app.post("/simulation/run")
-def run_simulation(request: SimulationRequest) -> dict:
-    return service.run(request)
+class RocketComponent(BaseModel):
+    name: str
+    type: str
+    material: str = "aluminum"
+    mass_kg: float = 0.0
+    length_m: float = 0.0
+    radius_m: float = 0.0
+    thickness_m: float = 0.0
+    drag_coefficient: float = 0.3
+
+
+class RocketConfig(BaseModel):
+    name: str = "AeroLab Rocket"
+    components: list[RocketComponent]
+    motor_thrust_n: float = 1500.0
+    burn_time_s: float = 4.0
+    propellant_mass_kg: float = 2.5
+    launch_angle_deg: float = 85.0
+    initial_altitude_m: float = 0.0
+
+
+class SimulationRequest(BaseModel):
+    rocket: RocketConfig
+    integrator: str = Field(default="RK4", pattern="^(Euler|RK4)$")
+    time_step_s: float = 0.05
+    max_duration_s: float = 30.0
+    drag_coefficient: float = 0.35
+    wind_speed_mps: float = 2.0
+
+
+def load_inventory() -> dict:
+    inventory_path = DATA_DIR / "rocket_inventory.json"
+    with inventory_path.open("r", encoding="utf-8") as fh:
+        return json.load(fh)

@@ -1,0 +1,11 @@
+{
+  "components": [
+    {"name": "Nose Cone A", "type": "nose_cone", "material": "carbon_fiber", "mass_kg": 1.1, "length_m": 0.55, "radius_m": 0.08, "thickness_m": 0.012, "drag_coefficient": 0.18},
+    {"name": "Body Tube 18", "type": "body_tube", "material": "aluminum", "mass_kg": 2.4, "length_m": 1.8, "radius_m": 0.08, "thickness_m": 0.004, "drag_coefficient": 0.25},
+    {"name": "Fin Set 4", "type": "fins", "material": "fiberglass", "mass_kg": 0.45, "length_m": 0.28, "radius_m": 0.08, "thickness_m": 0.02, "drag_coefficient": 0.42},
+    {"name": "Motor Mount", "type": "motor_mount", "material": "phenolic", "mass_kg": 0.32, "length_m": 0.4, "radius_m": 0.05, "thickness_m": 0.008, "drag_coefficient": 0.22},
+    {"name": "Parachute 1.2m", "type": "parachute", "material": "nylon", "mass_kg": 0.38, "length_m": 0.16, "radius_m": 0.18, "thickness_m": 0.006, "drag_coefficient": 0.9},
+    {"name": "Electronics Bay", "type": "electronics_bay", "material": "aluminum", "mass_kg": 0.72, "length_m": 0.32, "radius_m": 0.07, "thickness_m": 0.01, "drag_coefficient": 0.24}
+  ],
+  "source": "Illustrative engineering dataset for initial AeroLab modeling."
+}
