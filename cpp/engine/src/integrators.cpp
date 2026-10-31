@@ -26,7 +26,7 @@ StateVector Integrator::step_rk4(const StateVector& state,
                                 double drag_n,
                                 double gravity_n,
                                 double mass_kg) {
-    auto derivative = [](const StateVector& s, double t, double thrust, double drag, double gravity, double mass) {
+    auto derivative = [](const StateVector& s, double /*t*/, double thrust, double drag, double gravity, double mass) {
         StateVector out;
         const double acceleration = (thrust - drag - gravity) / mass;
         out.time_s = 1.0;

@@ -3,7 +3,6 @@ add_library(aerolab_engine
     src/atmosphere.cpp
     src/aerodynamics.cpp
     src/integrators.cpp
-    src/physics.cpp
     src/simulation.cpp
 )
 

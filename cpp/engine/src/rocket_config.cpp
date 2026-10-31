@@ -1,7 +1,7 @@
 #include "aerolab/rocket_config.hpp"
 
 #include <cmath>
-#include <utility>
+#include <algorithm>
 
 namespace aerolab {
 

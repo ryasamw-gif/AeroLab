@@ -1,0 +1,14 @@
+{
+  "name": "AeroLab Sample Rocket",
+  "components": [
+    {"name": "Nose Cone A", "type": "nose_cone", "material": "carbon_fiber", "mass_kg": 1.1, "length_m": 0.55, "radius_m": 0.08},
+    {"name": "Body Tube 18", "type": "body_tube", "material": "aluminum", "mass_kg": 2.4, "length_m": 1.8, "radius_m": 0.08},
+    {"name": "Fin Set 4", "type": "fins", "material": "fiberglass", "mass_kg": 0.45, "length_m": 0.28, "radius_m": 0.08},
+    {"name": "Motor Mount", "type": "motor_mount", "material": "phenolic", "mass_kg": 0.32, "length_m": 0.4, "radius_m": 0.05}
+  ],
+  "motor_thrust_n": 1800.0,
+  "burn_time_s": 4.0,
+  "propellant_mass_kg": 2.8,
+  "launch_angle_deg": 85.0,
+  "initial_altitude_m": 0.0
+}
