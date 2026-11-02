@@ -116,10 +116,18 @@ if (!viewer || !trajectoryChart || !componentList) {
   throw new Error('AeroLab dashboard required elements were not created.');
 }
 
+const trajectoryChartElement = trajectoryChart as HTMLElement;
+const componentListElement = componentList as HTMLElement;
+
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#0d1320');
 
-const camera = new THREE.PerspectiveCamera(50, viewer.clientWidth / viewer.clientHeight || 1, 0.1, 1500);
+const camera = new THREE.PerspectiveCamera(
+  50,
+  viewer.clientWidth / viewer.clientHeight || 1,
+  0.1,
+  1500
+);
 camera.position.set(0, 2.5, 9);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -205,28 +213,44 @@ floor.position.y = -1.5;
 scene.add(floor);
 
 function renderBars(values: number[]): void {
-  trajectoryChart.innerHTML = '';
+  trajectoryChartElement.innerHTML = '';
+
   const safeValues = values.length > 0 ? values : [10, 20, 30, 40, 50];
+  const maxValue = Math.max(...safeValues, 1);
+
   safeValues.forEach((value) => {
     const bar = document.createElement('span');
     bar.className = 'bar';
+
     const safeValue = Number.isFinite(value) ? value : 0;
-    const normalized = Math.max(10, (safeValue / Math.max(...safeValues, 1)) * 100);
+    const normalized = Math.max(10, (safeValue / maxValue) * 100);
+
     bar.style.height = `${normalized}%`;
-    trajectoryChart.appendChild(bar);
+    trajectoryChartElement.appendChild(bar);
   });
 }
 
 function renderComponentList(items: Array<{ name: string; mass_kg: number }>): void {
-  componentList.innerHTML = '';
+  componentListElement.innerHTML = '';
+
   items.forEach((item) => {
     const row = document.createElement('li');
-    row.innerHTML = `<span>${item.name}</span><strong>${Number(item.mass_kg || 0).toFixed(1)} kg</strong>`;
-    componentList.appendChild(row);
+    row.innerHTML = `
+      <span>${item.name}</span>
+      <strong>${Number(item.mass_kg || 0).toFixed(1)} kg</strong>
+    `;
+    componentListElement.appendChild(row);
   });
 }
 
-function updateCards(summary: { total_mass_kg?: number; cg_m?: number; peak_altitude_m?: number; max_velocity_mps?: number } | null): void {
+function updateCards(
+  summary: {
+    total_mass_kg?: number;
+    cg_m?: number;
+    peak_altitude_m?: number;
+    max_velocity_mps?: number;
+  } | null
+): void {
   const safeSummary = summary ?? {
     total_mass_kg: 0,
     cg_m: 0,
@@ -269,7 +293,9 @@ function updateCards(summary: { total_mass_kg?: number; cg_m?: number; peak_alti
 async function loadSimulation(): Promise<void> {
   try {
     const inventoryResponse = await fetch('http://localhost:8000/inventory');
-    const inventory = (await inventoryResponse.json()) as { components?: Array<{ name: string; mass_kg: number }> };
+    const inventory = (await inventoryResponse.json()) as {
+      components?: Array<{ name: string; mass_kg: number }>;
+    };
 
     const defaultResponse = await fetch('http://localhost:8000/config/default');
     const defaultConfig = (await defaultResponse.json()) as {
@@ -295,7 +321,12 @@ async function loadSimulation(): Promise<void> {
     });
 
     const simulation = (await simResponse.json()) as {
-      summary?: { total_mass_kg?: number; cg_m?: number; peak_altitude_m?: number; max_velocity_mps?: number };
+      summary?: {
+        total_mass_kg?: number;
+        cg_m?: number;
+        peak_altitude_m?: number;
+        max_velocity_mps?: number;
+      };
       trajectory?: Array<{ altitude_m: number }>;
     };
 
@@ -319,12 +350,17 @@ async function loadSimulation(): Promise<void> {
           { name: 'Motor Mount', mass_kg: 0.32 },
         ];
 
-    renderComponentList(inventory.components ? inventory.components.slice(0, 5).map((component) => ({
-      name: component.name,
-      mass_kg: Number(component.mass_kg || 0),
-    })) : componentValues);
+    renderComponentList(
+      inventory.components
+        ? inventory.components.slice(0, 5).map((component) => ({
+            name: component.name,
+            mass_kg: Number(component.mass_kg || 0),
+          }))
+        : componentValues
+    );
   } catch (error) {
     console.warn('AeroLab API is not running yet; showing design defaults.', error);
+
     updateCards({
       total_mass_kg: 17.8,
       cg_m: 0.93,
@@ -358,7 +394,9 @@ animate();
 void loadSimulation();
 
 window.addEventListener('resize', () => {
-  camera.aspect = (viewer.clientWidth || 800) / (viewer.clientHeight || 500);
+  const width = viewer.clientWidth || 800;
+  const height = viewer.clientHeight || 500;
+  camera.aspect = width / height;
   camera.updateProjectionMatrix();
-  renderer.setSize(viewer.clientWidth || 800, viewer.clientHeight || 500);
+  renderer.setSize(width, height);
 });
