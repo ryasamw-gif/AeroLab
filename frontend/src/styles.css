@@ -1,276 +1,441 @@
-import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import './styles.css';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-const app = document.querySelector('#app') as HTMLElement;
-
-app.innerHTML = `
-  <div class="layout">
-    <aside class="sidebar">
-      <div class="brand">
-        <span class="brand-mark">A</span>
-        <div>
-          <h1>AeroLab</h1>
-          <p>Advanced Rocket Engineering</p>
-        </div>
-      </div>
-
-      <nav>
-        <button class="nav-item active">Dashboard</button>
-        <button class="nav-item">Rocket Builder</button>
-        <button class="nav-item">Component Inventory</button>
-        <button class="nav-item">Simulation Lab</button>
-        <button class="nav-item">Computational Lab</button>
-        <button class="nav-item">Engineering Analysis</button>
-      </nav>
-
-      <div class="sidebar-panel">
-        <h3>Mission status</h3>
-        <div class="status-row"><span>Simulation</span><strong>Nominal</strong></div>
-        <div class="status-row"><span>Atmosphere</span><strong>STD</strong></div>
-        <div class="status-row"><span>Wind</span><strong>2.0 m/s</strong></div>
-      </div>
-    </aside>
-
-    <main class="content">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">Mission Control</p>
-          <h2>Launch System Overview</h2>
-        </div>
-        <div class="top-actions">
-          <button class="action-button secondary">Load Design</button>
-          <button class="action-button">Run Simulation</button>
-        </div>
-      </header>
-
-      <section class="metrics-grid">
-        <article class="metric-card">
-          <span>Total Mass</span>
-          <strong id="massValue">-- kg</strong>
-        </article>
-        <article class="metric-card">
-          <span>CG</span>
-          <strong id="cgValue">-- m</strong>
-        </article>
-        <article class="metric-card">
-          <span>Peak Altitude</span>
-          <strong id="altitudeValue">-- m</strong>
-        </article>
-        <article class="metric-card">
-          <span>Max Velocity</span>
-          <strong id="velocityValue">-- m/s</strong>
-        </article>
-      </section>
-
-      <section class="visual-panel">
-        <div class="viewer-shell">
-          <div id="viewer" class="viewer"></div>
-          <div class="viewer-overlay">
-            <span>Flight simulation preview</span>
-            <strong>Altitude window: 0–1800 m</strong>
-          </div>
-        </div>
-
-        <div class="telemetry-panel">
-          <h3>Telemetry</h3>
-          <ul>
-            <li><span>Altitude</span><strong id="telemetryAltitude">--</strong></li>
-            <li><span>Velocity</span><strong id="telemetryVelocity">--</strong></li>
-            <li><span>Acceleration</span><strong id="telemetryAcceleration">--</strong></li>
-            <li><span>Stability Margin</span><strong>1.4 cal</strong></li>
-          </ul>
-        </div>
-      </section>
-
-      <section class="lower-grid">
-        <div class="analytics-card chart-card">
-          <div class="panel-header">
-            <h3>Trajectory</h3>
-            <span>Altitude vs time</span>
-          </div>
-          <div class="chart-bars" id="trajectoryChart"></div>
-        </div>
-
-        <div class="analytics-card">
-          <div class="panel-header">
-            <h3>Components</h3>
-            <span>Assembly summary</span>
-          </div>
-          <ul class="component-list" id="componentList"></ul>
-        </div>
-      </section>
-    </main>
-  </div>
-`;
-
-const viewer = document.getElementById('viewer') as HTMLElement;
-const trajectoryChart = document.getElementById('trajectoryChart') as HTMLElement;
-const componentList = document.getElementById('componentList') as HTMLElement;
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color('#0d1320');
-
-const camera = new THREE.PerspectiveCamera(50, viewer.clientWidth / viewer.clientHeight, 0.1, 1500);
-camera.position.set(0, 2.5, 9);
-
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(viewer.clientWidth, viewer.clientHeight);
-viewer.appendChild(renderer.domElement);
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.enablePan = false;
-controls.minDistance = 4;
-controls.maxDistance = 18;
-controls.target.set(0, 1.5, 0);
-
-const ambient = new THREE.AmbientLight(0xffffff, 1.2);
-scene.add(ambient);
-
-const directional = new THREE.DirectionalLight(0x7ec8ff, 1.8);
-directional.position.set(6, 8, 4);
-scene.add(directional);
-
-const group = new THREE.Group();
-scene.add(group);
-
-const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x8fb4ff, metalness: 0.7, roughness: 0.25 });
-const noseMaterial = new THREE.MeshStandardMaterial({ color: 0x8ee3ff, metalness: 0.5, roughness: 0.25 });
-const finMaterial = new THREE.MeshStandardMaterial({ color: 0xc5d8ff, metalness: 0.4, roughness: 0.45 });
-
-const body = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.52, 4.0, 32), bodyMaterial);
-body.position.y = 0.4;
-group.add(body);
-
-const nose = new THREE.Mesh(new THREE.ConeGeometry(0.51, 1.2, 32), noseMaterial);
-nose.position.y = 3.0;
-group.add(nose);
-
-const finGeometry = new THREE.BoxGeometry(0.18, 1.1, 0.65);
-for (let i = 0; i < 4; i += 1) {
-  const fin = new THREE.Mesh(finGeometry, finMaterial);
-  fin.position.set(0, -1.1, 0);
-  fin.rotation.y = (i * Math.PI) / 2;
-  fin.rotation.z = Math.PI / 12;
-  group.add(fin);
+:root {
+  --bg: #050b12;
+  --bg-soft: #0d1721;
+  --panel: rgba(13, 22, 31, 0.88);
+  --panel-strong: rgba(17, 25, 34, 0.96);
+  --sidebar: rgba(9, 15, 21, 0.96);
+  --border: rgba(148, 163, 184, 0.22);
+  --text: #e5eef9;
+  --muted: #9aa9bd;
+  --cyan: #57d0ff;
+  --cyan-strong: #2394ff;
+  --violet: #7c9dff;
+  --green: #7bf0b7;
+  --gold: #f7c66a;
+  --shadow: 0 16px 40px rgba(2, 6, 15, 0.6);
 }
 
-const trailPoints = [
-  new THREE.Vector3(-2.8, 0.1, 0),
-  new THREE.Vector3(-2.0, 0.8, 0.2),
-  new THREE.Vector3(-1.1, 1.6, -0.1),
-  new THREE.Vector3(0.0, 2.6, 0.0),
-];
-
-const trail = new THREE.Line(
-  new THREE.BufferGeometry().setFromPoints(trailPoints),
-  new THREE.LineBasicMaterial({ color: 0x66d9ff })
-);
-scene.add(trail);
-
-const floor = new THREE.Mesh(
-  new THREE.CircleGeometry(8, 64),
-  new THREE.MeshStandardMaterial({ color: 0x101a2d, metalness: 0.3, roughness: 0.93 })
-);
-floor.rotation.x = -Math.PI / 2;
-floor.position.y = -1.5;
-scene.add(floor);
-
-function renderBars(values: number[]) {
-  trajectoryChart.innerHTML = '';
-  values.forEach((value) => {
-    const bar = document.createElement('span');
-    bar.className = 'bar';
-    bar.style.height = `${Math.max(10, value / 18)}%`;
-    trajectoryChart.appendChild(bar);
-  });
+* {
+  box-sizing: border-box;
 }
 
-function renderComponentList(items: Array<{ name: string; mass_kg: number }>) {
-  componentList.innerHTML = '';
-  items.forEach((item) => {
-    const row = document.createElement('li');
-    row.innerHTML = `<span>${item.name}</span><strong>${item.mass_kg.toFixed(1)} kg</strong>`;
-    componentList.appendChild(row);
-  });
+html, body, #app {
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(44, 100, 180, 0.3), transparent 25%),
+    linear-gradient(135deg, #040a12 0%, #091722 45%, #050b12 100%);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
 }
 
-function updateCards(summary: any) {
-  const mass = summary?.total_mass_kg ?? 0;
-  const cg = summary?.cg_m ?? 0;
-  const altitude = summary?.peak_altitude_m ?? 0;
-  const velocity = summary?.max_velocity_mps ?? 0;
-
-  (document.getElementById('massValue') as HTMLElement).textContent = `${mass.toFixed(1)} kg`;
-  (document.getElementById('cgValue') as HTMLElement).textContent = `${cg.toFixed(2)} m`;
-  (document.getElementById('altitudeValue') as HTMLElement).textContent = `${altitude.toFixed(0)} m`;
-  (document.getElementById('velocityValue') as HTMLElement).textContent = `${velocity.toFixed(0)} m/s`;
-  (document.getElementById('telemetryAltitude') as HTMLElement).textContent = `${altitude.toFixed(0)} m`;
-  (document.getElementById('telemetryVelocity') as HTMLElement).textContent = `${velocity.toFixed(0)} m/s`;
-  (document.getElementById('telemetryAcceleration') as HTMLElement).textContent = `${(velocity / 25).toFixed(1)} m/s²`;
+body {
+  overflow: hidden;
 }
 
-async function loadSimulation() {
-  try {
-    const inventoryResponse = await fetch('http://localhost:8000/inventory');
-    const inventory = await inventoryResponse.json();
-    const defaultResponse = await fetch('http://localhost:8000/config/default');
-    const defaultConfig = await defaultResponse.json();
+button {
+  font: inherit;
+}
 
-    const requestPayload = {
-      rocket: defaultConfig,
-      integrator: 'RK4',
-      time_step_s: 0.05,
-      max_duration_s: 30,
-      drag_coefficient: 0.35,
-      wind_speed_mps: 2.0,
-    };
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  width: 100%;
+  min-height: 100vh;
+}
 
-    const simResponse = await fetch('http://localhost:8000/simulation/run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestPayload),
-    });
-    const simulation = await simResponse.json();
+.sidebar {
+  background: rgba(6, 12, 20, 0.96);
+  border-right: 1px solid var(--border);
+  padding: 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
 
-    updateCards(simulation.summary);
-    renderBars(simulation.trajectory.map((point: any) => point.altitude_m).slice(0, 20));
-    renderComponentList(defaultConfig.components.map((c: any) => ({ name: c.name, mass_kg: c.mass_kg })));
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 8px 18px;
+  border-bottom: 1px solid var(--border);
+}
 
-    if (inventory.components?.length) {
-      renderComponentList(inventory.components.slice(0, 5).map((c: any) => ({ name: c.name, mass_kg: c.mass_kg })));
-    }
-  } catch (error) {
-    console.warn('AeroLab API is not running yet; showing design defaults.', error);
-    updateCards({ total_mass_kg: 17.8, cg_m: 0.93, peak_altitude_m: 1762, max_velocity_mps: 274 });
-    renderBars([40, 80, 120, 180, 260, 420, 580, 710, 910, 1120, 1360, 1540, 1720, 1610, 1490, 1300, 980, 620, 340, 10]);
-    renderComponentList([
-      { name: 'Nose Cone A', mass_kg: 1.1 },
-      { name: 'Body Tube 18', mass_kg: 2.4 },
-      { name: 'Fin Set 4', mass_kg: 0.45 },
-      { name: 'Motor Mount', mass_kg: 0.32 },
-    ]);
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--cyan), var(--cyan-strong));
+  color: #04131d;
+  font-size: 1.3rem;
+  font-weight: 800;
+  box-shadow: 0 12px 28px rgba(87, 208, 255, 0.4);
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.brand p {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nav-item {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text);
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-item.active,
+.nav-item:hover {
+  background: rgba(87, 208, 255, 0.1);
+  border-color: rgba(87, 208, 255, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(87, 208, 255, 0.15);
+}
+
+.sidebar-panel {
+  margin-top: auto;
+  background: rgba(12, 20, 28, 0.9);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px 16px;
+}
+
+.sidebar-panel h3 {
+  margin: 0 0 14px;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  color: var(--muted);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.status-row:last-child {
+  border-bottom: none;
+}
+
+.status-row strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.content {
+  padding: 22px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 8px 4px 2px;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.topbar h2 {
+  margin: 8px 0 0;
+  font-size: clamp(1.7rem, 2vw, 2.5rem);
+  line-height: 1.1;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.action-button {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--cyan), var(--cyan-strong));
+  color: #03141c;
+  box-shadow: 0 18px 30px rgba(35, 148, 255, 0.25);
+  cursor: pointer;
+}
+
+.action-button.secondary {
+  background: rgba(15, 23, 31, 0.7);
+  border: 1px solid var(--border);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.metric-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.metric-card span {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.metric-card strong {
+  font-size: clamp(1.2rem, 2vw, 1.8rem);
+  font-weight: 700;
+}
+
+.visual-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) minmax(260px, 0.8fr);
+  gap: 16px;
+  min-height: 420px;
+}
+
+.viewer-shell {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: rgba(7, 13, 18, 0.9);
+  box-shadow: var(--shadow);
+}
+
+.viewer {
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+}
+
+.viewer-overlay {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(5, 11, 16, 0.68);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(87, 208, 255, 0.2);
+}
+
+.viewer-overlay span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.viewer-overlay strong {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.telemetry-panel,
+.analytics-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+
+.telemetry-panel {
+  padding: 20px 18px;
+}
+
+.telemetry-panel h3,
+.panel-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.telemetry-panel ul {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.telemetry-panel li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.telemetry-panel li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.telemetry-panel li span {
+  color: var(--muted);
+}
+
+.telemetry-panel li strong {
+  color: var(--text);
+}
+
+.lower-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(260px, 0.7fr);
+  gap: 16px;
+}
+
+.analytics-card {
+  padding: 18px 18px 14px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.panel-header span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.chart-bars {
+  height: 160px;
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.bar {
+  display: block;
+  flex: 1;
+  min-height: 12px;
+  border-radius: 10px 10px 0 0;
+  background: linear-gradient(180deg, rgba(87, 208, 255, 0.9), rgba(35, 148, 255, 0.7));
+  box-shadow: inset 0 -6px 12px rgba(0, 0, 0, 0.12);
+}
+
+.component-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.component-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  background: rgba(9, 15, 21, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 10px;
+}
+
+.component-list span {
+  color: var(--text);
+}
+
+.component-list strong {
+  color: var(--gold);
+}
+
+@media (max-width: 1100px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .visual-panel,
+  .lower-grid {
+    grid-template-columns: 1fr;
   }
 }
 
-const clock = new THREE.Clock();
+@media (max-width: 760px) {
+  body {
+    overflow: auto;
+  }
 
-function animate() {
-  const t = clock.getElapsedTime();
-  group.rotation.y = t * 0.6;
-  group.rotation.x = Math.sin(t * 0.8) * 0.16;
-  controls.update();
-  renderer.render(scene, camera);
-  requestAnimationFrame(animate);
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .content {
+    padding: 16px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
-
-animate();
-loadSimulation();
-
-window.addEventListener('resize', () => {
-  camera.aspect = viewer.clientWidth / viewer.clientHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(viewer.clientWidth, viewer.clientHeight);
-});

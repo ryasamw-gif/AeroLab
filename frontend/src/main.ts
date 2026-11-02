@@ -1,6 +1,10 @@
-import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import * as Cesium from 'cesium';
+import 'cesium/Build/Cesium/Widgets/widgets.css';
 import './styles.css';
+
+window.CESIUM_BASE_URL = '/cesium/';
+
+const ionToken = (import.meta.env.VITE_CESIUM_ION_TOKEN as string | undefined) ?? '';
 
 const app = document.querySelector('#app');
 
@@ -9,7 +13,7 @@ if (!app) {
 }
 
 app.innerHTML = `
-  <div class="layout">
+  <div class="app-shell">
     <aside class="sidebar">
       <div class="brand">
         <span class="brand-mark">A</span>
@@ -69,7 +73,7 @@ app.innerHTML = `
 
       <section class="visual-panel">
         <div class="viewer-shell">
-          <div id="viewer" class="viewer"></div>
+          <div id="cesiumContainer" class="viewer"></div>
           <div class="viewer-overlay">
             <span>Flight simulation preview</span>
             <strong>Altitude window: 0–1800 m</strong>
@@ -108,112 +112,15 @@ app.innerHTML = `
   </div>
 `;
 
-const viewer = document.getElementById('viewer');
 const trajectoryChart = document.getElementById('trajectoryChart');
 const componentList = document.getElementById('componentList');
 
-if (!viewer || !trajectoryChart || !componentList) {
-  throw new Error('AeroLab dashboard required elements were not created.');
+if (!trajectoryChart || !componentList) {
+  throw new Error('AeroLab dashboard chart containers were not created.');
 }
-
-const trajectoryChartElement = trajectoryChart as HTMLElement;
-const componentListElement = componentList as HTMLElement;
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color('#0d1320');
-
-const camera = new THREE.PerspectiveCamera(
-  50,
-  viewer.clientWidth / viewer.clientHeight || 1,
-  0.1,
-  1500
-);
-camera.position.set(0, 2.5, 9);
-
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(viewer.clientWidth || 800, viewer.clientHeight || 500);
-viewer.appendChild(renderer.domElement);
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.enablePan = false;
-controls.minDistance = 4;
-controls.maxDistance = 18;
-controls.target.set(0, 1.5, 0);
-
-const ambient = new THREE.AmbientLight(0xffffff, 1.2);
-scene.add(ambient);
-
-const directional = new THREE.DirectionalLight(0x7ec8ff, 1.8);
-directional.position.set(6, 8, 4);
-scene.add(directional);
-
-const group = new THREE.Group();
-scene.add(group);
-
-const bodyMaterial = new THREE.MeshStandardMaterial({
-  color: 0x8fb4ff,
-  metalness: 0.7,
-  roughness: 0.25,
-});
-
-const noseMaterial = new THREE.MeshStandardMaterial({
-  color: 0x8ee3ff,
-  metalness: 0.5,
-  roughness: 0.25,
-});
-
-const finMaterial = new THREE.MeshStandardMaterial({
-  color: 0xc5d8ff,
-  metalness: 0.4,
-  roughness: 0.45,
-});
-
-const body = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.52, 4.0, 32), bodyMaterial);
-body.position.y = 0.4;
-group.add(body);
-
-const nose = new THREE.Mesh(new THREE.ConeGeometry(0.51, 1.2, 32), noseMaterial);
-nose.position.y = 3.0;
-group.add(nose);
-
-const finGeometry = new THREE.BoxGeometry(0.18, 1.1, 0.65);
-for (let i = 0; i < 4; i += 1) {
-  const fin = new THREE.Mesh(finGeometry, finMaterial);
-  fin.position.set(0, -1.1, 0);
-  fin.rotation.y = (i * Math.PI) / 2;
-  fin.rotation.z = Math.PI / 12;
-  group.add(fin);
-}
-
-const trailPoints = [
-  new THREE.Vector3(-2.8, 0.1, 0),
-  new THREE.Vector3(-2.0, 0.8, 0.2),
-  new THREE.Vector3(-1.1, 1.6, -0.1),
-  new THREE.Vector3(0.0, 2.6, 0.0),
-];
-
-const trail = new THREE.Line(
-  new THREE.BufferGeometry().setFromPoints(trailPoints),
-  new THREE.LineBasicMaterial({ color: 0x66d9ff }),
-);
-scene.add(trail);
-
-const floor = new THREE.Mesh(
-  new THREE.CircleGeometry(8, 64),
-  new THREE.MeshStandardMaterial({
-    color: 0x101a2d,
-    metalness: 0.3,
-    roughness: 0.93,
-  }),
-);
-floor.rotation.x = -Math.PI / 2;
-floor.position.y = -1.5;
-scene.add(floor);
 
 function renderBars(values: number[]): void {
-  trajectoryChartElement.innerHTML = '';
+  trajectoryChart.innerHTML = '';
 
   const safeValues = values.length > 0 ? values : [10, 20, 30, 40, 50];
   const maxValue = Math.max(...safeValues, 1);
@@ -221,17 +128,14 @@ function renderBars(values: number[]): void {
   safeValues.forEach((value) => {
     const bar = document.createElement('span');
     bar.className = 'bar';
-
-    const safeValue = Number.isFinite(value) ? value : 0;
-    const normalized = Math.max(10, (safeValue / maxValue) * 100);
-
+    const normalized = Math.max(10, (value / maxValue) * 100);
     bar.style.height = `${normalized}%`;
-    trajectoryChartElement.appendChild(bar);
+    trajectoryChart.appendChild(bar);
   });
 }
 
 function renderComponentList(items: Array<{ name: string; mass_kg: number }>): void {
-  componentListElement.innerHTML = '';
+  componentList.innerHTML = '';
 
   items.forEach((item) => {
     const row = document.createElement('li');
@@ -239,18 +143,11 @@ function renderComponentList(items: Array<{ name: string; mass_kg: number }>): v
       <span>${item.name}</span>
       <strong>${Number(item.mass_kg || 0).toFixed(1)} kg</strong>
     `;
-    componentListElement.appendChild(row);
+    componentList.appendChild(row);
   });
 }
 
-function updateCards(
-  summary: {
-    total_mass_kg?: number;
-    cg_m?: number;
-    peak_altitude_m?: number;
-    max_velocity_mps?: number;
-  } | null
-): void {
+function updateCards(summary: { total_mass_kg?: number; cg_m?: number; peak_altitude_m?: number; max_velocity_mps?: number } | null): void {
   const safeSummary = summary ?? {
     total_mass_kg: 0,
     cg_m: 0,
@@ -288,6 +185,160 @@ function updateCards(
     const accel = Number(safeSummary.max_velocity_mps || 0) / 25;
     telemetryAccelerationElement.textContent = `${accel.toFixed(1)} m/s²`;
   }
+}
+
+async function initializeCesium(): Promise<void> {
+  const viewer = new Cesium.Viewer('cesiumContainer', {
+    animation: false,
+    baseLayerPicker: true,
+    geocoder: true,
+    homeButton: true,
+    navigationHelpButton: true,
+    sceneModePicker: true,
+    timeline: false,
+    fullscreenButton: true,
+    selectionIndicator: false,
+    terrain: new Cesium.EllipsoidTerrainProvider(),
+    imageryProvider: ionToken
+      ? new Cesium.IonImageryProvider({ assetId: 2, accessToken: ionToken })
+      : new Cesium.OpenStreetMapImageryProvider({
+          url: 'https://tile.openstreetmap.org/',
+        }),
+  });
+
+  viewer.scene.globe.enableLighting = true;
+  viewer.scene.globe.depthTestAgainstTerrain = true;
+  viewer.resolutionScale = window.devicePixelRatio || 1;
+
+  viewer.camera.setView({
+    destination: Cesium.Cartesian3.fromDegrees(-121.915, 37.32, 800000),
+    orientation: {
+      heading: Cesium.Math.toRadians(0),
+      pitch: Cesium.Math.toRadians(-35),
+      roll: 0,
+    },
+  });
+
+  if (ionToken) {
+    Cesium.Ion.defaultAccessToken = ionToken;
+    try {
+      viewer.terrainProvider = await Cesium.CesiumTerrainProvider.fromIonAssetId(1, {
+        accessToken: ionToken,
+      });
+    } catch {
+      viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
+    }
+  }
+
+  const flightPath = [
+    Cesium.Cartesian3.fromDegrees(-122.5, 37.36, 0),
+    Cesium.Cartesian3.fromDegrees(-122.2, 37.8, 22000),
+    Cesium.Cartesian3.fromDegrees(-121.9, 38.3, 45000),
+    Cesium.Cartesian3.fromDegrees(-121.5, 38.9, 78000),
+    Cesium.Cartesian3.fromDegrees(-121.1, 39.4, 110000),
+  ];
+
+  viewer.entities.add({
+    polyline: {
+      positions: flightPath,
+      width: 4,
+      material: Cesium.Color.CYAN.withAlpha(0.9),
+      clampToGround: true,
+    },
+  });
+
+  const launchMarker = viewer.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(-122.5, 37.36, 0),
+    point: {
+      pixelSize: 10,
+      color: Cesium.Color.fromCssColorString('#57d0ff'),
+      outlineColor: Cesium.Color.WHITE,
+      outlineWidth: 2,
+    },
+    label: {
+      text: 'Launch Site',
+      font: '16px sans-serif',
+      fillColor: Cesium.Color.WHITE,
+      backgroundColor: Cesium.Color.BLACK.withAlpha(0.4),
+      showBackground: true,
+      distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0.0, 800000.0),
+      pixelOffset: new Cesium.Cartesian2(0, -30),
+    },
+  });
+
+  const rocket = viewer.entities.add({
+    position: flightPath[0],
+    point: {
+      pixelSize: 9,
+      color: Cesium.Color.ORANGE,
+      outlineColor: Cesium.Color.WHITE,
+      outlineWidth: 2,
+    },
+    label: {
+      text: 'AeroLab Rocket',
+      font: '14px sans-serif',
+      fillColor: Cesium.Color.WHITE,
+      showBackground: true,
+      backgroundColor: Cesium.Color.fromCssColorString('#111827').withAlpha(0.75),
+      pixelOffset: new Cesium.Cartesian2(0, -25),
+    },
+  });
+
+  let phase = 0;
+
+  const rocketPath = new Cesium.CallbackProperty(() => {
+    const t = (performance.now() / 1000) % 30;
+    const p = t / 30;
+    phase = p;
+    const index = Math.min(flightPath.length - 1, Math.floor(p * (flightPath.length - 1)));
+    const nextIndex = Math.min(flightPath.length - 1, index + 1);
+    const localT = (p * (flightPath.length - 1)) % 1;
+
+    const current = Cesium.Ellipsoid.WGS84.cartesianToCartographic(flightPath[index]);
+    const next = Cesium.Ellipsoid.WGS84.cartesianToCartographic(flightPath[nextIndex]);
+
+    const lon = Cesium.Math.lerp(current.longitude, next.longitude, localT);
+    const lat = Cesium.Math.lerp(current.latitude, next.latitude, localT);
+    const height = Cesium.Math.lerp(current.height, next.height, localT) + 1500;
+
+    return Cesium.Cartesian3.fromRadians(lon, lat, height);
+  }, false);
+
+  rocket.position = rocketPath;
+
+  const missionTarget = viewer.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(-121.1, 39.4, 110000),
+    billboard: {
+      image: '/cesium/Assets/Images/2D/target.png',
+      width: 34,
+      height: 34,
+      color: Cesium.Color.CYAN,
+    },
+  });
+
+  if (missionTarget) {
+    viewer.trackedEntity = missionTarget;
+  }
+
+  const area = viewer.entities.add({
+    polygon: {
+      hierarchy: Cesium.Cartesian3.fromDegreesArray([
+        -123, 36.8,
+        -119.8, 36.8,
+        -119.8, 40.5,
+        -123, 40.5,
+      ]),
+      material: Cesium.Color.CYAN.withAlpha(0.08),
+      outline: true,
+      outlineColor: Cesium.Color.CYAN.withAlpha(0.5),
+      outlineWidth: 2,
+    },
+  });
+
+  void area;
+  void launchMarker;
+  void phase;
+  return viewer;
 }
 
 async function loadSimulation(): Promise<void> {
@@ -334,7 +385,7 @@ async function loadSimulation(): Promise<void> {
 
     const trajectoryValues = Array.isArray(simulation.trajectory)
       ? simulation.trajectory.map((point) => Number(point.altitude_m || 0))
-      : [10, 20, 30, 40, 50];
+      : [40, 80, 120, 180, 260, 420, 580, 710, 910, 1120, 1360, 1540, 1720, 1610, 1490, 1300, 980, 620, 340, 10];
 
     renderBars(trajectoryValues.slice(0, 20));
 
@@ -348,10 +399,11 @@ async function loadSimulation(): Promise<void> {
           { name: 'Body Tube 18', mass_kg: 2.4 },
           { name: 'Fin Set 4', mass_kg: 0.45 },
           { name: 'Motor Mount', mass_kg: 0.32 },
+          { name: 'Guidance Unit', mass_kg: 0.8 },
         ];
 
     renderComponentList(
-      inventory.components
+      inventory.components && inventory.components.length > 0
         ? inventory.components.slice(0, 5).map((component) => ({
             name: component.name,
             mass_kg: Number(component.mass_kg || 0),
@@ -375,28 +427,129 @@ async function loadSimulation(): Promise<void> {
       { name: 'Body Tube 18', mass_kg: 2.4 },
       { name: 'Fin Set 4', mass_kg: 0.45 },
       { name: 'Motor Mount', mass_kg: 0.32 },
+      { name: 'Guidance Unit', mass_kg: 0.8 },
     ]);
   }
 }
 
-const clock = new THREE.Clock();
-
-function animate(): void {
-  const t = clock.getElapsedTime();
-  group.rotation.y = t * 0.6;
-  group.rotation.x = Math.sin(t * 0.8) * 0.16;
-  controls.update();
-  renderer.render(scene, camera);
-  requestAnimationFrame(animate);
-}
-
-animate();
+void initializeCesium();
 void loadSimulation();
 
-window.addEventListener('resize', () => {
-  const width = viewer.clientWidth || 800;
-  const height = viewer.clientHeight || 500;
-  camera.aspect = width / height;
-  camera.updateProjectionMatrix();
-  renderer.setSize(width, height);
+const viewer = new Cesium.Viewer('cesiumContainer', {
+  animation: false,
+  timeline: false,
+  baseLayerPicker: true,
+  fullscreenButton: true,
+  geocoder: true,
+  homeButton: true,
+  navigationHelpButton: true,
+  sceneModePicker: true,
+  terrainProvider: new Cesium.EllipsoidTerrainProvider(),
+  imageryProvider: new Cesium.OpenStreetMapImageryProvider({
+    url: 'https://tile.openstreetmap.org/',
+  }),
 });
+
+viewer.camera.setView({
+  destination: Cesium.Cartesian3.fromDegrees(-121.915, 37.32, 800000),
+  orientation: {
+    heading: Cesium.Math.toRadians(0),
+    pitch: Cesium.Math.toRadians(-35),
+    roll: 0,
+  },
+});
+
+viewer.scene.globe.enableLighting = true;
+viewer.scene.globe.depthTestAgainstTerrain = true;
+
+const camera = viewer.camera;
+const earthPath = [
+  Cesium.Cartesian3.fromDegrees(-122.5, 37.36, 0),
+  Cesium.Cartesian3.fromDegrees(-122.2, 37.8, 22000),
+  Cesium.Cartesian3.fromDegrees(-121.9, 38.3, 45000),
+  Cesium.Cartesian3.fromDegrees(-121.5, 38.9, 78000),
+  Cesium.Cartesian3.fromDegrees(-121.1, 39.4, 110000),
+];
+
+viewer.entities.add({
+  polyline: {
+    positions: earthPath,
+    width: 4,
+    material: Cesium.Color.CYAN.withAlpha(0.95),
+    clampToGround: true,
+  },
+});
+
+const rocketEntity = viewer.entities.add({
+  position: earthPath[0],
+  point: {
+    pixelSize: 10,
+    color: Cesium.Color.ORANGE,
+    outlineColor: Cesium.Color.WHITE,
+    outlineWidth: 2,
+  },
+  label: {
+    text: 'AeroLab Rocket',
+    font: '14px sans-serif',
+    fillColor: Cesium.Color.WHITE,
+    showBackground: true,
+    backgroundColor: Cesium.Color.BLACK.withAlpha(0.5),
+    pixelOffset: new Cesium.Cartesian2(0, -25),
+  },
+});
+
+const rocketPosition = new Cesium.CallbackProperty(() => {
+  const t = (performance.now() / 1000) % 30;
+  const p = t / 30;
+  const index = Math.min(earthPath.length - 1, Math.floor(p * (earthPath.length - 1)));
+  const nextIndex = Math.min(earthPath.length - 1, index + 1);
+  const localT = (p * (earthPath.length - 1)) % 1;
+
+  const current = Cesium.Ellipsoid.WGS84.cartesianToCartographic(earthPath[index]);
+  const next = Cesium.Ellipsoid.WGS84.cartesianToCartographic(earthPath[nextIndex]);
+
+  const lon = Cesium.Math.lerp(current.longitude, next.longitude, localT);
+  const lat = Cesium.Math.lerp(current.latitude, next.latitude, localT);
+  const height = Cesium.Math.lerp(current.height, next.height, localT) + 1500;
+
+  return Cesium.Cartesian3.fromRadians(lon, lat, height);
+}, false);
+
+rocketEntity.position = rocketPosition;
+
+viewer.entities.add({
+  position: Cesium.Cartesian3.fromDegrees(-121.1, 39.4, 110000),
+  billboard: {
+    image: '/cesium/Assets/Images/2D/target.png',
+    width: 32,
+    height: 32,
+    color: Cesium.Color.CYAN,
+  },
+});
+
+viewer.camera.lookAt(
+  Cesium.Cartesian3.fromDegrees(-121.6, 38.5, 40000),
+  new Cesium.Cartesian3(0, 0, 100000)
+);
+
+window.addEventListener('resize', () => {
+  viewer.resize();
+  camera.update();
+});
+
+const flightSummary = {
+  total_mass_kg: 17.8,
+  cg_m: 0.93,
+  peak_altitude_m: 1762,
+  max_velocity_mps: 274,
+};
+
+updateCards(flightSummary);
+renderBars([40, 80, 120, 180, 260, 420, 580, 710, 910, 1120, 1360, 1540, 1720, 1610, 1490, 1300, 980, 620, 340, 10]);
+renderComponentList([
+  { name: 'Nose Cone A', mass_kg: 1.1 },
+  { name: 'Body Tube 18', mass_kg: 2.4 },
+  { name: 'Fin Set 4', mass_kg: 0.45 },
+  { name: 'Motor Mount', mass_kg: 0.32 },
+  { name: 'Guidance Unit', mass_kg: 0.8 },
+]);

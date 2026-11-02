@@ -1,7 +1,7 @@
 {
   "name": "aerolab-frontend",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,11 +9,13 @@
     "preview": "vite preview --host"
   },
   "dependencies": {
+    "cesium": "^1.124.0",
     "three": "^0.166.1"
   },
   "devDependencies": {
     "@types/three": "^0.165.0",
     "typescript": "^5.5.4",
-    "vite": "^5.3.2"
+    "vite": "^5.3.2",
+    "vite-plugin-static-copy": "^1.0.0"
   }
 }
